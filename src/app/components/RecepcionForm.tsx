@@ -31,7 +31,10 @@ export default function RecepcionForm({ isOpen, onClose }: RecepcionFormProps) {
     proveedor: '',
     num_guia: '',
     volumen: '',
-    certificacion: CERTS[0]
+    certificacion: CERTS[0],
+    rol: '',
+    origen: '',
+    comuna: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -78,7 +81,10 @@ export default function RecepcionForm({ isOpen, onClose }: RecepcionFormProps) {
             proveedor: formData.proveedor,
             num_guia: formData.num_guia,
             volumen_m3: volumenNumerico,
-            certificacion: formData.certificacion
+            certificacion: formData.certificacion,
+            rol: formData.rol || null,
+            origen: formData.origen || null,
+            comuna: formData.comuna || null
           }
         ])
         .select()
@@ -97,7 +103,10 @@ export default function RecepcionForm({ isOpen, onClose }: RecepcionFormProps) {
         proveedor: '',
         num_guia: '',
         volumen: '',
-        certificacion: CERTS[0]
+        certificacion: CERTS[0],
+        rol: '',
+        origen: '',
+        comuna: ''
       })
       onClose()
       
@@ -252,6 +261,66 @@ export default function RecepcionForm({ isOpen, onClose }: RecepcionFormProps) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label htmlFor="rol" className="block mb-2 text-gray-700 font-medium">
+            Rol
+          </label>
+          <input
+            type="text"
+            id="rol"
+            name="rol"
+            value={formData.rol}
+            onChange={handleChange}
+            className="w-full border-2 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            style={{ 
+              borderColor: 'var(--light-brown)',
+              backgroundColor: 'white'
+            }}
+            placeholder="Rol del predio (opcional)"
+            disabled={loading}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="origen" className="block mb-2 text-gray-700 font-medium">
+            Origen/Predio
+          </label>
+          <input
+            type="text"
+            id="origen"
+            name="origen"
+            value={formData.origen}
+            onChange={handleChange}
+            className="w-full border-2 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            style={{ 
+              borderColor: 'var(--light-brown)',
+              backgroundColor: 'white'
+            }}
+            placeholder="Nombre del predio (opcional)"
+            disabled={loading}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="comuna" className="block mb-2 text-gray-700 font-medium">
+            Comuna
+          </label>
+          <input
+            type="text"
+            id="comuna"
+            name="comuna"
+            value={formData.comuna}
+            onChange={handleChange}
+            className="w-full border-2 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            style={{ 
+              borderColor: 'var(--light-brown)',
+              backgroundColor: 'white'
+            }}
+            placeholder="Comuna del predio (opcional)"
+            disabled={loading}
+          />
         </div>
         
         <div className="flex justify-end space-x-4 pt-4">

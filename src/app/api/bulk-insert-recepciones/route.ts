@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+interface RecepcionRecord {
+  fecha_recepcion: string;
+  producto_codigo: string;
+  proveedor: string;
+  num_guia: string;
+  volumen_m3: number;
+  certificacion: string;
+  rol?: string | null;
+  predio?: string | null;
+  comuna?: string | null;
+  user_id: string;
+}
+
 // Crear cliente con service role key
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -80,8 +93,16 @@ export async function POST(request: NextRequest) {
             const values = valuesMatch[1].split(',').map(val => val.trim());
             
             // Crear objeto con los valores parseados
-            const record: unknown = {
-              user_id: validUserId // Usar siempre el usuario autenticado
+            const record: Partial<RecepcionRecord> = {
+              fecha_recepcion: '',
+              producto_codigo: '',
+              proveedor: '',
+              num_guia: '',
+              volumen_m3: 0,
+              certificacion: '',
+              rol: null,
+              comuna: null,
+              user_id: validUserId
             };
             
             // Mapear columnas a valores
@@ -103,8 +124,8 @@ export async function POST(request: NextRequest) {
                 record.certificacion = value.replace(/'/g, '').replace(/''/g, "'");
               } else if (column === 'rol') {
                 record.rol = value.replace(/'/g, '').replace(/''/g, "'");
-              } else if (column === 'origen') {
-                record.origen = value.replace(/'/g, '').replace(/''/g, "'");
+              } else if (column === 'origen' || column === 'predio' || column === 'PREDIO/ORIGEN') {
+                record.predio = value.replace(/'/g, '').replace(/''/g, "'");
               } else if (column === 'comuna') {
                 record.comuna = value.replace(/'/g, '').replace(/''/g, "'");
               }
@@ -126,18 +147,16 @@ export async function POST(request: NextRequest) {
         console.log(`🔄 Insertando ${parsedRecords.length} registros...`);
         console.log('📋 Primer registro de ejemplo:', parsedRecords[0]);
 
-        // DEBUGGING: Mostrar el SQL completo que se va a ejecutar
-        console.log('🔍 DEBUGGING - SQL COMPLETO:');
-        console.log('='.repeat(80));
-        
-        // Generar el SQL INSERT completo para debugging
-        const recordsWithAuthUser = parsedRecords.map(record => ({
-          fecha_recepcion: record.fecha_recepcion,
-          producto_codigo: record.producto_codigo,
-          proveedor: record.proveedor,
-          num_guia: record.num_guia,
-          volumen_m3: record.volumen_m3,
-          certificacion: record.certificacion,
+        const recordsWithAuthUser = parsedRecords.map((record: Partial<RecepcionRecord>) => ({
+          fecha_recepcion: record.fecha_recepcion || '',
+          producto_codigo: record.producto_codigo || '',
+          proveedor: record.proveedor || '',
+          num_guia: record.num_guia || '',
+          volumen_m3: record.volumen_m3 || 0,
+          certificacion: record.certificacion || '',
+          rol: record.rol || null,
+          predio: record.predio || null,
+          comuna: record.comuna || null,
           user_id: validUserId // SIEMPRE usar el usuario autenticado, NUNCA NULL
           // NO incluir 'id' - se auto-genera
           // NO incluir 'created_at' - se auto-genera
@@ -179,53 +198,9 @@ export async function POST(request: NextRequest) {
         console.log(`✅ VERIFICACIÓN COMPLETA: TODOS LOS ${recordsWithAuthUser.length} REGISTROS TIENEN USER_ID VÁLIDO: ${validUserId}`);
         console.log(`✅ FORMATO USER_ID VERIFICADO: ${validUserId} (${validUserId.length} caracteres)`);
 
-        // Mostrar el SQL INSERT que se generaría
-        const sqlInsertExample = `
-INSERT INTO recepciones (fecha_recepcion, producto_codigo, proveedor, num_guia, volumen_m3, certificacion, user_id)
-VALUES 
-${recordsWithAuthUser.slice(0, 3).map(record => 
-  `  ('${record.fecha_recepcion}', '${record.producto_codigo}', '${record.proveedor.replace(/'/g, "''")}', '${record.num_guia}', ${record.volumen_m3}, '${record.certificacion.replace(/'/g, "''")}', '${record.user_id}')`
-).join(',\n')}
-${recordsWithAuthUser.length > 3 ? `... y ${recordsWithAuthUser.length - 3} registros más` : ''};
-        `;
+
         
-        console.log('📝 SQL INSERT que se ejecutará:');
-        console.log(sqlInsertExample);
-        console.log('='.repeat(80));
-        
-        // Información adicional para debugging
-        console.log('🔍 INFORMACIÓN DE DEBUGGING:');
-        console.log(`- Total de registros: ${recordsWithAuthUser.length}`);
-        console.log(`- Usuario autenticado: ${validUserId}`);
-        console.log(`- Primer registro completo:`, JSON.stringify(recordsWithAuthUser[0], null, 2));
-        console.log(`- Último registro completo:`, JSON.stringify(recordsWithAuthUser[recordsWithAuthUser.length - 1], null, 2));
-        console.log('='.repeat(80));
-
-        // USAR EXACTAMENTE EL MISMO MÉTODO QUE FUNCIONA EN EL DIAGNÓSTICO
-        console.log('🔧 USANDO MÉTODO IDÉNTICO AL DIAGNÓSTICO EXITOSO');
-        const userSupabase = supabase; // Usar service role key directo como en el diagnóstico
-
-        // DEBUGGING: Verificar el contexto de autenticación antes de insertar
-        console.log('🔍 VERIFICANDO CONTEXTO DE AUTENTICACIÓN:');
-        try {
-          const { data: { user: currentUser } } = await userSupabase.auth.getUser();
-          console.log('- Usuario actual en el contexto:', currentUser?.id || 'NO AUTENTICADO');
-          console.log('- Email del usuario:', currentUser?.email || 'NO DISPONIBLE');
-          console.log('- Rol del usuario:', currentUser?.role || 'NO DISPONIBLE');
-        } catch (authCheckError) {
-          console.log('- Error verificando usuario:', authCheckError);
-        }
-
-        // DEBUGGING: Verificar políticas RLS activas
-        console.log('🔍 VERIFICANDO POLÍTICAS RLS:');
-        try {
-          const { data: policies } = await supabase.rpc('exec_sql', { 
-            sql: `SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE tablename = 'recepciones' AND cmd = 'INSERT';`
-          });
-          console.log('- Políticas INSERT activas:', policies);
-        } catch (policyError) {
-          console.log('- Error obteniendo políticas:', policyError);
-        }
+        const userSupabase = supabase;
 
         try {
           console.log('🚀 EJECUTANDO INSERCIÓN MASIVA...');
@@ -234,13 +209,10 @@ ${recordsWithAuthUser.length > 3 ? `... y ${recordsWithAuthUser.length - 3} regi
             .insert(recordsWithAuthUser)
             .select();
 
-          console.log('📊 RESULTADO DE INSERCIÓN MASIVA:');
-          console.log('- Error:', error);
-          console.log('- Data length:', data?.length || 0);
-          console.log('- Error code:', error?.code);
-          console.log('- Error details:', error?.details);
-          console.log('- Error hint:', error?.hint);
-          console.log('- Error message completo:', error?.message);
+          console.log(`${error ? '❌ Error en inserción masiva' : '✅ Inserción masiva exitosa'}`);
+          if (error) {
+            console.log('Error:', error.message);
+          }
 
           if (!error && data) {
             insertedCount = data.length;
@@ -291,6 +263,8 @@ ${recordsWithAuthUser.length > 3 ? `... y ${recordsWithAuthUser.length - 3} regi
         num_guia: record.num_guia,
         volumen_m3: record.volumen_m3,
         certificacion: record.certificacion,
+        rol: record.rol || null,
+        comuna: record.comuna || null,
         user_id: validUserId // Usar el user_id válido
       }));
 
