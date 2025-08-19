@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --light-green: #dcfce7;
+  --medium-green: #22c55e;
+  --dark-green: #15803d;
+  --light-brown: #f3e8d3;
+  --medium-brown: #d2b48c;
+  --dark-brown: #8b4513;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--light-green);
+  color: var(--foreground);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Estilos personalizados para TreeTracker */
+.treetracker-header {
+  background: linear-gradient(135deg, var(--light-green) 0%, var(--light-brown) 100%);
+  border-bottom: 3px solid var(--medium-green);
+}
+
+.treetracker-card {
+  background: white;
+  border: 2px solid var(--light-brown);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.treetracker-table {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.treetracker-button-primary {
+  background: var(--medium-green);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.treetracker-button-primary:hover {
+  background: var(--dark-green);
+  transform: translateY(-1px);
+}
+
+.treetracker-button-secondary {
+  background: var(--medium-brown);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.treetracker-button-secondary:hover {
+  background: var(--dark-brown);
+  transform: translateY(-1px);
+}
+
+/* Animaciones para Toast */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 0.3s ease-in;
+}
