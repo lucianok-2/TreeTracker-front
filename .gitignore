@@ -305,3 +305,11 @@ CAMBIOS_STOCK_W52.md
 FUNCION_VENTA_MASISA.md
 PRODUCTION_SUMMARY.md
 README_USER_FUNCTIONS.md
+
+# ================================
+# 🐍 ARCHIVOS PYTHON NO NECESARIOS PARA EL FRONT
+# ================================
+# Archivos de configuración y scripts de Python
+requirements.txt
+setup_python_api.sh
+prepare-production.sh
