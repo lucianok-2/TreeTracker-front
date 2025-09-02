@@ -295,8 +295,13 @@ nginx-configs/
 # - next.config.js
 # - tailwind.config.js
 # - tsconfig.json
-# - python-api/app.py
-# - python-api/functions/ (procesadores)
-# - python-api/requirements.txt
 # - README.md
-# - DEPLOYMENT_GUIDE.md
+
+# ================================
+# 📄 ARCHIVOS DE DOCUMENTACIÓN EXCLUIDOS
+# ================================
+# Archivos de documentación específicos a excluir
+CAMBIOS_STOCK_W52.md
+FUNCION_VENTA_MASISA.md
+PRODUCTION_SUMMARY.md
+README_USER_FUNCTIONS.md
