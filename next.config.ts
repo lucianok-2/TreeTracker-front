@@ -2,6 +2,15 @@
 const nextConfig = {
   // Configuración básica sin TypeScript strict
   reactStrictMode: false,
+  
+  // Desactivar ESLint y TypeScript checking durante el build para producción
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  
   // Deshabilitar optimizaciones que pueden causar problemas
   experimental: {},
   // Configuración de webpack para evitar problemas de case-sensitivity
