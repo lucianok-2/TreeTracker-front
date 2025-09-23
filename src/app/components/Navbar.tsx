@@ -30,6 +30,9 @@ export default function Navbar() {
               <a href="/dashboard" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                 📊 Dashboard
               </a>
+              <a href="/predios" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                🌲 Predios
+              </a>
               <a href="/recepciones" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                 📋 Recepciones
               </a>
