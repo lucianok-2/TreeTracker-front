@@ -33,6 +33,9 @@ export default function Navbar() {
               <a href="/predios" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                 🌲 Predios
               </a>
+              <a href="/documentos" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                📄 Documentos
+              </a>
               <a href="/recepciones" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                 📋 Recepciones
               </a>
