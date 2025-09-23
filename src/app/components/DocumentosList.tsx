@@ -162,15 +162,56 @@ export default function DocumentosList({ predio }: DocumentosListProps) {
     }
 
     try {
+      // Primero obtener la información del documento para extraer la URL del archivo
+      const { data: documento, error: selectError } = await supabase
+        .from('documentos')
+        .select('archivo_url, nombre_archivo')
+        .eq('id', documentoId)
+        .single();
+
+      if (selectError) {
+        console.error('Error obteniendo información del documento:', selectError);
+        alert('Error al obtener información del documento');
+        return;
+      }
+
+      // Eliminar el archivo del bucket si existe
+      if (documento?.archivo_url) {
+        try {
+          // Extraer el path del archivo de la URL
+          const urlParts = documento.archivo_url.split('/storage/v1/object/public/documentos/');
+          const filePath = urlParts?.[1];
+          
+          if (filePath) {
+            console.log('Eliminando archivo del bucket:', filePath);
+            const { error: storageError } = await supabase.storage
+              .from('documentos')
+              .remove([filePath]);
+
+            if (storageError) {
+              console.error('Error eliminando archivo del bucket:', storageError);
+              // Continuar con la eliminación de la base de datos aunque falle el storage
+            } else {
+              console.log('Archivo eliminado del bucket exitosamente');
+            }
+          }
+        } catch (storageErr) {
+          console.error('Error procesando eliminación del archivo:', storageErr);
+          // Continuar con la eliminación de la base de datos
+        }
+      }
+
+      // Eliminar el registro de la base de datos
       const { error } = await supabase
         .from('documentos')
         .delete()
         .eq('id', documentoId);
 
       if (error) {
-        console.error('Error eliminando documento:', error);
-        alert('Error al eliminar el documento');
+        console.error('Error eliminando documento de la base de datos:', error);
+        alert('Error al eliminar el documento de la base de datos');
       } else {
+        console.log('Documento eliminado exitosamente de la base de datos');
         cargarDatos(); // Recargar la lista
       }
     } catch (err) {
@@ -302,46 +343,6 @@ export default function DocumentosList({ predio }: DocumentosListProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 {loading ? 'Cargando...' : 'Actualizar'}
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    console.log('=== VERIFICANDO STORAGE CON AMBOS CLIENTES ===');
-                    
-                    // Verificar con cliente regular
-                    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-                    console.log('Buckets con cliente regular:', buckets);
-                    
-                    if (bucketsError) {
-                      console.error('Error con cliente regular:', bucketsError);
-                    }
-                    
-                    // Verificar con API endpoint que usa admin client
-                    try {
-                      const response = await fetch('/api/verify-storage', {
-                        method: 'GET',
-                      });
-                      
-                      if (response.ok) {
-                        const data = await response.json();
-                        console.log('Verificación con admin client:', data);
-                        alert(`Verificación completada:\n- Cliente regular: ${buckets?.length || 0} buckets\n- Cliente admin: ${data.buckets?.length || 0} buckets`);
-                      } else {
-                        throw new Error('Error en API de verificación');
-                      }
-                    } catch (apiError) {
-                      console.error('Error verificando con admin:', apiError);
-                      alert(`Cliente regular: ${buckets?.length || 0} buckets\nAdmin client: Error`);
-                    }
-                    
-                  } catch (error) {
-                    console.error('Error verificando storage:', error);
-                    alert('Error verificando storage');
-                  }
-                }}
-                className="px-4 py-3 bg-purple-100 hover:bg-purple-200 rounded-lg font-medium text-purple-700 flex items-center gap-2"
-              >
-                🔧 Verificar Storage
               </button>
             </div>
             <div className="text-xs text-gray-500 text-center space-y-1">
