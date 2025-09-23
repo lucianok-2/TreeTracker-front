@@ -44,6 +44,25 @@ body {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+.treetracker-button {
+  background: var(--medium-green);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.treetracker-button:hover {
+  background: var(--dark-green);
+  transform: translateY(-1px);
+}
+
+.treetracker-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .treetracker-button-primary {
   background: var(--medium-green);
   color: white;

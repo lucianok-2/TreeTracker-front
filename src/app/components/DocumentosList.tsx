@@ -45,6 +45,10 @@ export default function DocumentosList({ predio }: DocumentosListProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<Documento | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -65,10 +69,35 @@ export default function DocumentosList({ predio }: DocumentosListProps) {
       if (tiposError) {
         console.error('Error cargando tipos de documentos:', tiposError);
       } else {
-        setTiposDocumentos(tiposData || []);
+        // Añadir la opción "Otros Documentos" al final de la lista
+        const tiposConOtros = [
+          ...(tiposData || []),
+          {
+            id: 'otros',
+            nombre: 'Otros Documentos',
+            descripcion: 'Documentos adicionales específicos del predio',
+            obligatorio: false,
+            activo: true
+          }
+        ];
+        setTiposDocumentos(tiposConOtros);
       }
 
       // Cargar documentos del predio
+      console.log('=== DEBUG CARGA DE DOCUMENTOS ===');
+      console.log('Predio ID:', predio.id);
+      console.log('Predio nombre:', predio.nombre);
+      
+      // Primero, verificar si hay documentos en general
+      const { data: allDocs, error: allDocsError } = await supabase
+        .from('documentos')
+        .select('*')
+        .limit(5);
+      
+      console.log('Documentos totales en BD (primeros 5):', allDocs?.length || 0);
+      console.log('Documentos ejemplo:', allDocs);
+      
+      // Luego, buscar documentos específicos del predio
       const { data: documentosData, error: documentosError } = await supabase
         .from('documentos')
         .select(`
@@ -81,13 +110,38 @@ export default function DocumentosList({ predio }: DocumentosListProps) {
           )
         `)
         .eq('predio_id', predio.id)
+        .eq('estado', 'activo')
         .order('fecha_subida', { ascending: false });
+      
+      console.log('Documentos del predio específico:', documentosData?.length || 0);
+
+      console.log('Respuesta completa de documentos:', {
+        data: documentosData,
+        error: documentosError,
+        count: documentosData?.length || 0
+      });
 
       if (documentosError) {
-        setError('Error al cargar documentos');
-        console.error('Error:', documentosError);
+        console.error('Error cargando documentos:', documentosError);
+        setError('Error al cargar documentos: ' + documentosError.message);
       } else {
-        setDocumentos(documentosData || []);
+        console.log('Documentos cargados exitosamente:', documentosData?.length || 0);
+        
+        // Procesar documentos para mostrar "Otros" cuando no hay tipo
+        const documentosProcesados = (documentosData || []).map(doc => {
+          console.log('Procesando documento:', doc.nombre_archivo, 'tipo:', doc.tipo_documento_id);
+          return {
+            ...doc,
+            tipos_documentos: doc.tipos_documentos || {
+              id: 'otros',
+              nombre: 'Otros Documentos',
+              descripcion: 'Documento personalizado',
+              obligatorio: false
+            }
+          };
+        });
+        setDocumentos(documentosProcesados);
+        console.log('Documentos procesados:', documentosProcesados.length);
       }
     } catch (err) {
       setError('Error de conexión');
@@ -122,6 +176,53 @@ export default function DocumentosList({ predio }: DocumentosListProps) {
     } catch (err) {
       console.error('Error:', err);
       alert('Error de conexión');
+    }
+  };
+
+  const handleVistaPrevia = async (documento: Documento) => {
+    setLoadingPreview(true);
+    try {
+      // Verificar que el bucket existe
+      const verifyResponse = await fetch('/api/verify-storage', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!verifyResponse.ok) {
+        throw new Error('Error verificando almacenamiento');
+      }
+
+      // Extraer el path del archivo de la URL
+      const urlParts = documento.archivo_url?.split('/storage/v1/object/public/documentos/');
+      const filePath = urlParts?.[1];
+      
+      if (!filePath) {
+        throw new Error('No se pudo determinar la ruta del archivo');
+      }
+
+      // Descargar el archivo como blob
+      const { data, error } = await supabase.storage
+        .from('documentos')
+        .download(filePath);
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        // Crear URL del blob para vista previa
+        const url = URL.createObjectURL(data);
+        setPreviewUrl(url);
+        setPreviewDocument(documento);
+        setShowPreview(true);
+      }
+    } catch (error) {
+      console.error('Error cargando vista previa:', error);
+      alert('Error al cargar la vista previa del documento');
+    } finally {
+      setLoadingPreview(false);
     }
   };
 
@@ -182,18 +283,71 @@ export default function DocumentosList({ predio }: DocumentosListProps) {
             </p>
           </div>
           <div className="flex flex-col gap-2">
-            <button
-              onClick={() => setShowForm(true)}
-              className="treetracker-button px-6 py-3 rounded-lg font-medium text-white flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Subir Documento
-            </button>
-            <p className="text-xs text-gray-500 text-center">
-              Archivos hasta 10MB
-            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowForm(true)}
+                className="treetracker-button px-6 py-3 rounded-lg font-medium text-white flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Subir Documento
+              </button>
+              <button
+                onClick={cargarDatos}
+                className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium text-gray-700 flex items-center gap-2"
+                disabled={loading}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {loading ? 'Cargando...' : 'Actualizar'}
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    console.log('=== VERIFICANDO STORAGE CON AMBOS CLIENTES ===');
+                    
+                    // Verificar con cliente regular
+                    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+                    console.log('Buckets con cliente regular:', buckets);
+                    
+                    if (bucketsError) {
+                      console.error('Error con cliente regular:', bucketsError);
+                    }
+                    
+                    // Verificar con API endpoint que usa admin client
+                    try {
+                      const response = await fetch('/api/verify-storage', {
+                        method: 'GET',
+                      });
+                      
+                      if (response.ok) {
+                        const data = await response.json();
+                        console.log('Verificación con admin client:', data);
+                        alert(`Verificación completada:\n- Cliente regular: ${buckets?.length || 0} buckets\n- Cliente admin: ${data.buckets?.length || 0} buckets`);
+                      } else {
+                        throw new Error('Error en API de verificación');
+                      }
+                    } catch (apiError) {
+                      console.error('Error verificando con admin:', apiError);
+                      alert(`Cliente regular: ${buckets?.length || 0} buckets\nAdmin client: Error`);
+                    }
+                    
+                  } catch (error) {
+                    console.error('Error verificando storage:', error);
+                    alert('Error verificando storage');
+                  }
+                }}
+                className="px-4 py-3 bg-purple-100 hover:bg-purple-200 rounded-lg font-medium text-purple-700 flex items-center gap-2"
+              >
+                🔧 Verificar Storage
+              </button>
+            </div>
+            <div className="text-xs text-gray-500 text-center space-y-1">
+              <p>Archivos hasta 10MB</p>
+              {error && <p className="text-red-500">Error: {error}</p>}
+            </div>
           </div>
         </div>
       </div>
@@ -224,7 +378,23 @@ export default function DocumentosList({ predio }: DocumentosListProps) {
           <div className="text-center py-8">
             <div className="text-4xl mb-4">📄</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No hay documentos subidos</h3>
-            <p className="text-gray-500 mb-4">Comienza subiendo el primer documento para este predio</p>
+            <p className="text-gray-500 mb-4">Comienza subiendo el primer documento para este predio: <strong>{predio.nombre}</strong></p>
+            <div className="text-xs text-gray-400 mb-4">
+              <p>Debug: Predio ID: {predio.id}</p>
+              <p>Total documentos encontrados: {documentos.length}</p>
+              <button
+                onClick={() => {
+                  console.log('Estado actual:');
+                  console.log('- Predio:', predio);
+                  console.log('- Documentos:', documentos);
+                  console.log('- Loading:', loading);
+                  console.log('- Error:', error);
+                }}
+                className="text-blue-500 hover:text-blue-700 underline"
+              >
+                Ver info de debug en consola
+              </button>
+            </div>
             <button
               onClick={() => setShowForm(true)}
               className="treetracker-button px-8 py-4 rounded-lg font-medium text-white text-lg flex items-center gap-3 mx-auto"
@@ -291,14 +461,55 @@ export default function DocumentosList({ predio }: DocumentosListProps) {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
                         {documento.archivo_url && (
-                          <a
-                            href={documento.archivo_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            Descargar
-                          </a>
+                          <>
+                            <button
+                              onClick={() => handleVistaPrevia(documento)}
+                              disabled={loadingPreview}
+                              className="text-purple-600 hover:text-purple-900 disabled:opacity-50"
+                            >
+                              {loadingPreview ? 'Cargando...' : 'Vista Previa'}
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  console.log('Intentando descarga directa para:', documento.nombre_archivo);
+                                  
+                                  // Extraer el path del archivo de la URL
+                                  const urlParts = documento.archivo_url?.split('/storage/v1/object/public/documentos/');
+                                  const filePath = urlParts?.[1];
+                                  
+                                  if (filePath) {
+                                    // Crear nueva URL de descarga
+                                    const { data } = await supabase.storage
+                                      .from('documentos')
+                                      .download(filePath);
+                                    
+                                    if (data) {
+                                      // Crear blob y descargar
+                                      const url = URL.createObjectURL(data);
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.download = documento.nombre_archivo;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      URL.revokeObjectURL(url);
+                                    } else {
+                                      alert('Error al descargar el archivo');
+                                    }
+                                  } else {
+                                    alert('No se pudo determinar la ruta del archivo');
+                                  }
+                                } catch (error) {
+                                  console.error('Error en descarga:', error);
+                                  alert('Error al descargar el archivo');
+                                }
+                              }}
+                              className="text-green-600 hover:text-green-900"
+                            >
+                              Descargar
+                            </button>
+                          </>
                         )}
                         <button
                           onClick={() => handleEliminarDocumento(documento.id)}
@@ -329,6 +540,40 @@ export default function DocumentosList({ predio }: DocumentosListProps) {
           onClose={() => setShowForm(false)}
           onDocumentoCreado={handleDocumentoCreado}
         />
+      )}
+
+      {/* Modal de Vista Previa */}
+      {showPreview && previewDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg w-11/12 h-5/6 max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold">{previewDocument.nombre_archivo}</h3>
+              <button
+                onClick={() => {
+                  // Limpiar URL del blob para liberar memoria
+                  if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                  }
+                  setShowPreview(false);
+                  setPreviewDocument(null);
+                  setPreviewUrl(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 p-4">
+              {previewUrl && (
+                <iframe
+                  src={previewUrl}
+                  className="w-full h-full border-0"
+                  title={`Vista previa de ${previewDocument?.nombre_archivo}`}
+                />
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

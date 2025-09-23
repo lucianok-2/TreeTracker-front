@@ -25,6 +25,14 @@ export async function POST(request: NextRequest) {
     const notas = formData.get('notas') as string;
     const userId = formData.get('user_id') as string;
 
+    console.log('Datos recibidos:', {
+      archivo: archivo?.name,
+      predioId,
+      tipoDocumentoId,
+      nombrePersonalizado,
+      userId
+    });
+
     if (!archivo || !predioId || !userId) {
       return NextResponse.json(
         { error: 'Faltan campos requeridos' },
@@ -40,13 +48,67 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear estructura de carpetas: usuario_id/categoria/archivo
+    // Obtener información del predio
+    const { data: predio } = await supabaseAdmin
+      .from('predios')
+      .select('nombre')
+      .eq('id', predioId)
+      .single();
+
+    if (!predio) {
+      return NextResponse.json(
+        { error: 'Predio no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    console.log('Predio encontrado:', predio.nombre);
+    console.log('Caracteres del nombre original:', predio.nombre.split('').map((char: string) => `${char} (${char.charCodeAt(0)})`));
+
+    // Limpiar nombre del predio para usar como carpeta - versión mejorada
+    let nombrePredio = predio.nombre;
+    
+    // Primero, intentar una limpieza más permisiva
+    nombrePredio = nombrePredio
+      .normalize('NFD') // Normalizar caracteres acentuados
+      .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos
+      .replace(/[^a-zA-Z0-9\s\-_.]/g, '') // Solo mantener letras, números, espacios, guiones y puntos
+      .replace(/\s+/g, '_') // Reemplazar espacios con guiones bajos
+      .replace(/_{2,}/g, '_') // Reemplazar múltiples guiones bajos con uno solo
+      .replace(/^_+|_+$/g, '') // Remover guiones bajos al inicio y final
+      .toLowerCase()
+      .trim();
+
+    console.log('Nombre después de primera limpieza:', nombrePredio);
+    console.log('Longitud después de primera limpieza:', nombrePredio.length);
+
+    // Si el resultado es muy corto, intentar una estrategia diferente
+    if (!nombrePredio || nombrePredio.length < 3) {
+      console.log('Nombre muy corto, intentando estrategia alternativa...');
+      
+      // Estrategia alternativa: mantener solo letras y números
+      nombrePredio = predio.nombre
+        .replace(/[^a-zA-Z0-9]/g, '') // Solo letras y números
+        .toLowerCase();
+      
+      console.log('Nombre con estrategia alternativa:', nombrePredio);
+      
+      // Si aún es muy corto, usar el ID del predio
+      if (!nombrePredio || nombrePredio.length < 3) {
+        console.log('Usando ID del predio como fallback');
+        nombrePredio = `predio_${predioId.replace(/-/g, '').substring(0, 8)}`;
+      }
+    }
+
+    console.log('Nombre final del predio:', nombrePredio);
+
+    // Crear estructura de carpetas: usuario_id/predio/categoria/archivo
     const timestamp = Date.now();
     let categoria = 'sin_categoria';
     
     if (tipoDocumentoId === 'otros') {
       categoria = 'otros';
-    } else if (tipoDocumentoId !== 'otros') {
+    } else if (tipoDocumentoId && tipoDocumentoId !== 'otros') {
       // Obtener nombre del tipo de documento
       const { data: tipoDoc } = await supabaseAdmin
         .from('tipos_documentos')
@@ -56,18 +118,95 @@ export async function POST(request: NextRequest) {
       
       if (tipoDoc) {
         categoria = tipoDoc.nombre
-          .replace(/[^a-zA-Z0-9\s]/g, '')
+          .normalize('NFD') // Normalizar caracteres acentuados
+          .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos
+          .replace(/[^a-zA-Z0-9\s\-_.]/g, '')
           .replace(/\s+/g, '_')
+          .replace(/_{2,}/g, '_')
+          .replace(/^_+|_+$/g, '')
           .toLowerCase();
+        
+        // Si la categoría queda muy corta, usar el ID
+        if (!categoria || categoria.length < 2) {
+          categoria = `tipo_${tipoDocumentoId.replace(/-/g, '').substring(0, 8)}`;
+        }
+      } else {
+        categoria = `tipo_${tipoDocumentoId.replace(/-/g, '').substring(0, 8)}`;
       }
     }
 
-    // Estructura de carpetas: usuario_id/categoria/archivo
-    const filePath = `${userId}/${categoria}/${timestamp}_${archivo.name}`;
+    console.log('Categoría:', categoria);
 
-    console.log('Intentando subir archivo a:', filePath);
+    // Crear estructura de carpetas: user/predio/tipo_documento/archivo
+    // Pero con nombres más seguros y compatibles con Supabase Storage
+    
+    // Limpiar userId - mantener solo primeros 8 caracteres alfanuméricos
+    const safeUserId = userId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+    
+    // Crear nombre seguro para el predio
+    const safePredioId = predioId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+    const safePredioName = nombrePredio.length >= 3 ? nombrePredio : `predio${safePredioId}`;
+    
+    // Crear nombre seguro para la categoría
+    const safeCategoria = categoria.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    
+    // Limpiar nombre del archivo
+    const cleanFileName = archivo.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    
+    // Estructura de carpetas: user/predio/categoria/timestamp_archivo
+    const filePath = `${safeUserId}/${safePredioName}/${safeCategoria}/${timestamp}_${cleanFileName}`;
 
-    // Configurar opciones de subida para forzar la creación de carpetas
+    console.log('Estructura de carpetas creada:');
+    console.log('- Usuario:', safeUserId);
+    console.log('- Predio:', safePredioName);
+    console.log('- Categoría:', safeCategoria);
+    console.log('- Archivo:', `${timestamp}_${cleanFileName}`);
+    console.log('- Ruta completa:', filePath);
+    
+    // Validar longitud total de la ruta (Supabase tiene límites)
+    if (filePath.length > 255) {
+      console.error('Ruta demasiado larga:', filePath.length);
+      return NextResponse.json(
+        { error: 'Nombre de archivo demasiado largo' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar si el bucket existe, si no, crearlo
+    try {
+      const { data: buckets, error: bucketsError } = await supabaseAdmin.storage.listBuckets();
+      
+      if (bucketsError) {
+        console.error('Error listando buckets:', bucketsError);
+      } else {
+        const bucketExists = buckets?.some(bucket => bucket.name === 'documentos');
+        
+        if (!bucketExists) {
+          console.log('Bucket documentos no existe, creándolo...');
+          const { error: createError } = await supabaseAdmin.storage.createBucket('documentos', {
+            public: true,
+            allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            fileSizeLimit: 10485760 // 10MB
+          });
+          
+          if (createError) {
+            console.error('Error creando bucket:', createError);
+            return NextResponse.json(
+              { error: `Error creando bucket de almacenamiento: ${createError.message}` },
+              { status: 500 }
+            );
+          } else {
+            console.log('Bucket documentos creado exitosamente');
+          }
+        } else {
+          console.log('Bucket documentos ya existe');
+        }
+      }
+    } catch (err) {
+      console.error('Error verificando bucket:', err);
+    }
+
+    // Configurar opciones de subida
     const { error: uploadError } = await supabaseAdmin.storage
       .from('documentos')
       .upload(filePath, archivo, {
@@ -82,6 +221,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log('Archivo subido exitosamente');
 
     // Obtener URL pública
     const { data: { publicUrl } } = supabaseAdmin.storage
@@ -99,10 +240,12 @@ export async function POST(request: NextRequest) {
       tamaño_archivo: archivo.size,
       tipo_mime: archivo.type,
       fecha_vencimiento: fechaVencimiento || null,
-      notas: notas ? `${notas} | Usuario: ${userId} | Categoría: ${categoria}` : `Usuario: ${userId} | Categoría: ${categoria}`,
+      notas: notas ? `${notas} | Usuario: ${userId} | Predio: ${predio.nombre} | Categoría: ${categoria} | Ruta: ${filePath}` : `Usuario: ${userId} | Predio: ${predio.nombre} | Categoría: ${categoria} | Ruta: ${filePath}`,
       estado: 'activo',
       created_by: userId
     };
+
+    console.log('Guardando en base de datos:', documentoData);
 
     const { error: dbError, data: insertedData } = await supabaseAdmin
       .from('documentos')
@@ -122,6 +265,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log('Documento guardado exitosamente:', insertedData[0]);
 
     return NextResponse.json({
       success: true,

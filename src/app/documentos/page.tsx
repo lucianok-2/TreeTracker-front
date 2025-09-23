@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Predio } from '@/types/documentos';
 import { supabase } from '@/lib/supabaseClient';
 import Navbar from '@/app/components/Navbar';
-import SubirDocumentoForm from '@/app/components/SubirDocumentoForm';
+import DocumentosList from '@/app/components/DocumentosList';
 
 export default function DocumentosPage() {
   const [predios, setPredios] = useState<Predio[]>([]);
@@ -13,13 +13,6 @@ export default function DocumentosPage() {
   const [busqueda, setBusqueda] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [tiposDocumentos, setTiposDocumentos] = useState<{
-    id: string;
-    nombre: string;
-    descripcion?: string;
-    obligatorio: boolean;
-  }[]>([]);
 
   useEffect(() => {
     cargarPredios();
@@ -55,29 +48,6 @@ export default function DocumentosPage() {
       } else {
         setPredios(prediosData || []);
         setPrediosFiltrados(prediosData || []);
-      }
-
-      // Cargar tipos de documentos
-      const { data: tiposData, error: tiposError } = await supabase
-        .from('tipos_documentos')
-        .select('*')
-        .eq('activo', true)
-        .order('nombre');
-
-      if (tiposError) {
-        console.error('Error cargando tipos de documentos:', tiposError);
-      } else {
-        // Añadir la opción "Otros Documentos" al final de la lista
-        const tiposConOtros = [
-          ...(tiposData || []),
-          {
-            id: 'otros',
-            nombre: 'Otros Documentos',
-            descripcion: 'Documentos adicionales específicos del predio',
-            obligatorio: false
-          }
-        ];
-        setTiposDocumentos(tiposConOtros);
       }
     } catch (err) {
       setError('Error de conexión');
@@ -237,38 +207,7 @@ export default function DocumentosPage() {
           {/* Panel de Documentos */}
           <div className="lg:col-span-2">
             {predioSeleccionado ? (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">📄 Documentos de {predioSeleccionado.nombre}</h2>
-                    <p className="text-sm text-gray-600 mt-1">Gestiona los documentos de este predio</p>
-                  </div>
-                  <button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2"
-                    onClick={() => setShowForm(true)}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Subir Documento
-                  </button>
-                </div>
-                <div className="text-center py-8">
-                  <div className="text-6xl mb-4">📄</div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    No hay documentos subidos
-                  </h3>
-                  <p className="text-gray-500 mb-4">
-                    Comienza subiendo el primer documento para este predio
-                  </p>
-                  <button 
-                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg font-medium text-lg"
-                    onClick={() => setShowForm(true)}
-                  >
-                    📁 Subir Primer Documento
-                  </button>
-                </div>
-              </div>
+              <DocumentosList predio={predioSeleccionado} />
             ) : (
               <div className="bg-white rounded-lg shadow-sm p-8">
                 <div className="text-center">
@@ -285,20 +224,6 @@ export default function DocumentosPage() {
           </div>
         </div>
       </div>
-
-      {/* Modal para subir documento */}
-      {showForm && predioSeleccionado && (
-        <SubirDocumentoForm
-          predio={predioSeleccionado}
-          tiposDocumentos={tiposDocumentos}
-          onClose={() => setShowForm(false)}
-          onDocumentoCreado={() => {
-            setShowForm(false);
-            // Aquí podrías recargar los documentos si tuvieras una lista
-            alert('Documento subido exitosamente!');
-          }}
-        />
-      )}
     </div>
   );
 }
