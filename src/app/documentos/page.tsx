@@ -5,8 +5,9 @@ import { Predio } from '@/types/documentos';
 import { supabase } from '@/lib/supabaseClient';
 import Navbar from '@/app/components/Navbar';
 import DocumentosList from '@/app/components/DocumentosList';
+import withAuth from '@/app/components/with-auth';
 
-export default function DocumentosPage() {
+function DocumentosPage() {
   const [predios, setPredios] = useState<Predio[]>([]);
   const [prediosFiltrados, setPrediosFiltrados] = useState<Predio[]>([]);
   const [predioSeleccionado, setPredioSeleccionado] = useState<Predio | null>(null);
@@ -227,3 +228,5 @@ export default function DocumentosPage() {
     </div>
   );
 }
+
+export default withAuth(DocumentosPage);

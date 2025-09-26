@@ -1,13 +1,16 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Navbar() {
   const { user, signOut } = useAuth()
+  const router = useRouter()
 
   const handleSignOut = async () => {
     try {
       await signOut()
+      router.push('/login')
     } catch (error) {
       console.error('Error al cerrar sesión:', error)
     }
