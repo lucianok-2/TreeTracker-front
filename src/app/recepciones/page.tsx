@@ -14,7 +14,7 @@ interface Recepcion {
   volumen_m3: number
   certificacion: string
   rol?: string
-  origen?: string
+  predio?: string
   comuna?: string
   user_id: string
   created_at: string
@@ -32,6 +32,7 @@ export default function RecepcionesPage() {
   const [filtroRol, setFiltroRol] = useState('')
   const [filtroOrigen, setFiltroOrigen] = useState('')
   const [filtroComuna, setFiltroComuna] = useState('')
+  const [filtroNumGuia, setFiltroNumGuia] = useState('')
   const [editingRecepcion, setEditingRecepcion] = useState<Recepcion | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
 
@@ -80,10 +81,13 @@ export default function RecepcionesPage() {
         query = query.ilike('rol', `%${filtroRol}%`)
       }
       if (filtroOrigen) {
-        query = query.ilike('origen', `%${filtroOrigen}%`)
+        query = query.ilike('predio', `%${filtroOrigen}%`)
       }
       if (filtroComuna) {
         query = query.ilike('comuna', `%${filtroComuna}%`)
+      }
+      if (filtroNumGuia) {
+        query = query.ilike('num_guia', `%${filtroNumGuia}%`)
       }
 
       console.log('Ejecutando consulta...')
@@ -102,7 +106,7 @@ export default function RecepcionesPage() {
     } finally {
       setLoading(false)
     }
-  }, [user, fechaInicio, fechaFin, filtroProveedor, filtroRol, filtroOrigen, filtroComuna])
+  }, [user, fechaInicio, fechaFin, filtroProveedor, filtroRol, filtroOrigen, filtroComuna, filtroNumGuia])
 
   useEffect(() => {
     loadRecepciones()
@@ -170,7 +174,7 @@ export default function RecepcionesPage() {
           producto_codigo: editingRecepcion.producto_codigo,
           certificacion: editingRecepcion.certificacion,
           rol: editingRecepcion.rol || null,
-          origen: editingRecepcion.origen || null,
+          predio: editingRecepcion.predio || null,
           comuna: editingRecepcion.comuna || null
         })
         .eq('id', editingRecepcion.id)
@@ -211,7 +215,7 @@ export default function RecepcionesPage() {
         {/* Filtros */}
         <div className="bg-white p-4 rounded-lg shadow mb-6">
           <h2 className="text-lg font-semibold mb-4">🔍 Filtros</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Fecha Inicio</label>
               <input
@@ -241,6 +245,16 @@ export default function RecepcionesPage() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium mb-2">Núm. Guía</label>
+              <input
+                type="text"
+                value={filtroNumGuia}
+                onChange={(e) => setFiltroNumGuia(e.target.value)}
+                placeholder="Buscar núm. guía..."
+                className="w-full p-2 border rounded-md"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-2">Rol</label>
               <input
                 type="text"
@@ -251,12 +265,12 @@ export default function RecepcionesPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Origen/Predio</label>
+              <label className="block text-sm font-medium mb-2">Predio</label>
               <input
                 type="text"
                 value={filtroOrigen}
                 onChange={(e) => setFiltroOrigen(e.target.value)}
-                placeholder="Buscar origen..."
+                placeholder="Buscar predio..."
                 className="w-full p-2 border rounded-md"
               />
             </div>
@@ -326,37 +340,37 @@ export default function RecepcionesPage() {
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200" style={{minWidth: '1200px'}}>
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-32">
                     Fecha Recepción
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Proveedor
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Num. Guía
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Volumen (m³)
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Producto
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-32">
                     Certificación
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-24">
                     Rol
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Origen/Predio
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-32">
+                    Predio
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-28">
                     Comuna
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     Acciones
                   </th>
                 </tr>
@@ -364,45 +378,47 @@ export default function RecepcionesPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {recepciones.map((recepcion) => (
                   <tr key={recepcion.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(recepcion.fecha_recepcion)}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 min-w-32">
+                      <div className="text-xs leading-tight">
+                        {formatDate(recepcion.fecha_recepcion)}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                      {recepcion.proveedor}
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs" title={recepcion.proveedor}>
+                      <div className="truncate">{recepcion.proveedor}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {recepcion.num_guia}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
                       {formatNumber(recepcion.volumen_m3)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                       {recepcion.producto_codigo}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                      {recepcion.certificacion}
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-32" title={recepcion.certificacion}>
+                      <div className="truncate">{recepcion.certificacion}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                      {recepcion.rol || '-'}
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-24" title={recepcion.rol || '-'}>
+                      <div className="truncate">{recepcion.rol || '-'}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                      {recepcion.origen || '-'}
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-32" title={recepcion.predio || '-'}>
+                      <div className="truncate">{recepcion.predio || '-'}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                      {recepcion.comuna || '-'}
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-28" title={recepcion.comuna || '-'}>
+                      <div className="truncate">{recepcion.comuna || '-'}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex space-x-2">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 w-24">
+                      <div className="flex flex-col space-y-1">
                         <button
                           onClick={() => handleEdit(recepcion)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-1 py-1 rounded text-xs w-full"
                           title="Editar registro"
                         >
                           ✏️ Editar
                         </button>
                         <button
                           onClick={() => handleDelete(recepcion.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs"
+                          className="bg-red-500 hover:bg-red-600 text-white px-1 py-1 rounded text-xs w-full"
                           title="Eliminar registro"
                         >
                           🗑️ Eliminar
@@ -518,13 +534,13 @@ export default function RecepcionesPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Origen/Predio</label>
+                <label className="block text-sm font-medium mb-2">Predio</label>
                 <input
                   type="text"
-                  value={editingRecepcion.origen || ''}
+                  value={editingRecepcion.predio || ''}
                   onChange={(e) => setEditingRecepcion({
                     ...editingRecepcion,
-                    origen: e.target.value || undefined
+                    predio: e.target.value || undefined
                   })}
                   className="w-full p-2 border rounded-md"
                   placeholder="Opcional"
