@@ -18,4 +18,11 @@ export interface DashboardData {
   ventasAserrin: Record<string, Record<string, number>>
   stockInicialAserrin: Record<string, number>
   stockFinalAserrin: Record<string, number>
+  
+  // Custom metrics for Vision user (W10.3 Pallets)
+  produccionPallets: Record<string, number>
+  rendimientoPallets: Record<string, number>
+  ventasPallets: Record<string, Record<string, number>>
+  stockInicialPallets: Record<string, number>
+  stockFinalPallets: Record<string, number>
 }

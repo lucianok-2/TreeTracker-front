@@ -13,7 +13,8 @@ const PRODUCTOS = [
   { codigo: 'W1.1', nombre: 'Trozos de pinus radiata' },
   { codigo: 'W5.2', nombre: 'Madera dimensionada pinus radiata' },
   { codigo: 'W3.1', nombre: 'Astillas pinus radiata' },
-  { codigo: 'W3.2', nombre: 'Aserrín pinus radiata' }
+  { codigo: 'W3.2', nombre: 'Aserrín pinus radiata' },
+  { codigo: 'W10.3', nombre: 'Pallets de madera' }
 ]
 
 export default function ProduccionForm({ isOpen, onClose }: ProduccionFormProps) {

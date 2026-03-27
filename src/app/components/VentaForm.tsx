@@ -12,7 +12,8 @@ interface VentaFormProps {
 const PRODUCTOS = [
   { codigo: 'W5.2', nombre: 'Madera dimensionada pinus radiata' },
   { codigo: 'W3.1', nombre: 'Astillas pinus radiata' },
-  { codigo: 'W3.2', nombre: 'Aserrín pinus radiata' }
+  { codigo: 'W3.2', nombre: 'Aserrín pinus radiata' },
+  { codigo: 'W10.3', nombre: 'Pallets de madera' }
 ]
 
 const CERTS = [

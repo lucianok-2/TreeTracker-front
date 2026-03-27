@@ -78,7 +78,8 @@ interface RawData {
 function DashboardPage() {
   const { user } = useAuth()
   const [year, setYear] = useState(new Date().getFullYear())
-  
+  const [isVisionUser, setIsVisionUser] = useState(false)
+
 
 
   // Función para formatear números: 1 decimal, pero si es entero no mostrar .0
@@ -115,7 +116,12 @@ function DashboardPage() {
     rendimientoAserrin: {},
     ventasAserrin: {},
     stockInicialAserrin: {},
-    stockFinalAserrin: {}
+    stockFinalAserrin: {},
+    produccionPallets: {},
+    rendimientoPallets: {},
+    ventasPallets: {},
+    stockInicialPallets: {},
+    stockFinalPallets: {}
   })
 
   useEffect(() => {
@@ -132,6 +138,29 @@ function DashboardPage() {
     const loadAllData = async () => {
       try {
         const currentYear = year
+
+        // Check if user is in 'vision' table (envolver "user" por ser palabra reservada en Postgres)
+        const { data: visionData, error: visionError } = await supabase
+          .from('vision')
+          .select('"user"')
+          .eq('"user"', user?.id)
+          .single()
+        
+        if (visionError && visionError.code !== 'PGRST116') { // Ignorar error de "No rows"
+          console.error('Error fetching vision user:', visionError)
+        }
+        
+        // Agregar UUID quemado por seguridad si el RLS (Row Level Security) de Supabase bloquea la consulta a la tabla
+        const isVision = !!visionData || user?.id === 'ae6a5783-4da9-49d2-b415-af7384362b7c'
+        
+        console.log('--- DEBUG VISION USER ---', { 
+          userIdLogueado: user?.id, 
+          isVisionUser: isVision,
+          respuestaTabla: visionData,
+          errorTabla: visionError
+        })
+
+        setIsVisionUser(isVision)
 
         // Cargar stock inicial
         const { data: stockData, error: stockError } = await supabase
@@ -211,7 +240,12 @@ function DashboardPage() {
         rendimientoAserrin: {},
         ventasAserrin: {},
         stockInicialAserrin: {},
-        stockFinalAserrin: {}
+        stockFinalAserrin: {},
+        produccionPallets: {},
+        rendimientoPallets: {},
+        ventasPallets: {},
+        stockInicialPallets: {},
+        stockFinalPallets: {}
       }
 
       // Procesar stock inicial
@@ -317,6 +351,18 @@ function DashboardPage() {
             processedData.rendimientoAserrin[mesNombre] = parseFloat(item.factor_rendimiento)
           }
         }
+
+        // Producción de pallets (W10.3)
+        if (item.producto_destino_codigo === 'W10.3') {
+          if (!processedData.produccionPallets[mesNombre]) {
+            processedData.produccionPallets[mesNombre] = 0
+          }
+          processedData.produccionPallets[mesNombre] += parseFloat(item.volumen_destino_m3)
+
+          if (item.factor_rendimiento) {
+            processedData.rendimientoPallets[mesNombre] = parseFloat(item.factor_rendimiento)
+          }
+        }
       })
 
       // Procesar ventas
@@ -372,12 +418,23 @@ function DashboardPage() {
             }
             processedData.ventasAserrin[cert][mesNombre] += parseFloat(item.volumen_m3)
           }
+
+          // Ventas de pallets (W10.3)
+          if (item.producto_codigo === 'W10.3') {
+            if (!processedData.ventasPallets[cert]) {
+              processedData.ventasPallets[cert] = {}
+            }
+            if (!processedData.ventasPallets[cert][mesNombre]) {
+              processedData.ventasPallets[cert][mesNombre] = 0
+            }
+            processedData.ventasPallets[cert][mesNombre] += parseFloat(item.volumen_m3)
+          }
         })
       }
 
       // Calcular Stock Inicial automático y Stock Final
       // El stock inicial de cada mes debe ser el stock final del mes anterior
-      ['W1.1', 'W5.2', 'W3.1', 'W3.2'].forEach(producto => {
+      ['W1.1', 'W5.2', 'W3.1', 'W3.2', 'W10.3'].forEach(producto => {
         let stockAnterior = 0
 
         MESES.forEach(mes => {
@@ -420,6 +477,8 @@ function DashboardPage() {
             produccionMes = processedData.produccionAstillas[mes] || 0
           } else if (producto === 'W3.2') {
             produccionMes = processedData.produccionAserrin[mes] || 0
+          } else if (producto === 'W10.3') {
+            produccionMes = processedData.produccionPallets[mes] || 0
           }
 
           // Calcular consumo (principalmente afecta a W1.1)
@@ -439,6 +498,10 @@ function DashboardPage() {
             Object.keys(processedData.ventasAserrin).forEach(cert => {
               ventasMes += processedData.ventasAserrin[cert]?.[mes] || 0
             })
+          } else if (producto === 'W10.3') {
+            Object.keys(processedData.ventasPallets).forEach(cert => {
+              ventasMes += processedData.ventasPallets[cert]?.[mes] || 0
+            })
           }
 
           // Calcular stock final según el tipo de producto
@@ -446,8 +509,8 @@ function DashboardPage() {
           if (producto === 'W1.1') {
             // Para materia prima: Stock Inicial + Recepciones - Consumo
             stockFinal = stockInicial + totalRecepciones - consumoMes
-          } else if (producto === 'W5.2') {
-            // Para MADERA (W5.2): Stock Inicial + Producción - Ventas
+          } else if (producto === 'W5.2' || producto === 'W10.3') {
+            // Para MADERA (W5.2) y PALLETS (W10.3): Stock Inicial + Producción - Ventas
             stockFinal = stockInicial + produccionMes - ventasMes
           } else if (producto === 'W3.1' || producto === 'W3.2') {
             // Para ASTILLAS y ASERRÍN: SIEMPRE STOCK INICIAL Y FINAL = 0 (se vende todo)
@@ -500,6 +563,12 @@ function DashboardPage() {
         if (processedData.produccionMadera[mes] && processedData.consumo[mes]) {
           const factor = (processedData.produccionMadera[mes] / processedData.consumo[mes]) * 100
           processedData.rendimientoMadera[mes] = factor
+        }
+
+        // Factor de rendimiento para pallets W10.3
+        if (processedData.produccionPallets[mes] && processedData.consumo[mes]) {
+          const factor = (processedData.produccionPallets[mes] / processedData.consumo[mes]) * 100
+          processedData.rendimientoPallets[mes] = factor
         }
 
         // Factor de rendimiento para astillas: suma de ventas / Consumo W1.1
@@ -558,7 +627,7 @@ function DashboardPage() {
               </select>
             </div>
             <div className="flex flex-wrap gap-2">
-              <ExcelExporter data={data} year={year} />
+              <ExcelExporter data={data} year={year} isVisionUser={isVisionUser} />
               <div className="border-l border-gray-300 mx-2 h-8"></div>
               <button
                 onClick={() => setStockInicialOpen(true)}
@@ -732,10 +801,13 @@ function DashboardPage() {
                 ))}
               </tr>
 
-              {/* === SECCIÓN MADERA (W5.2) === */}
-              <tr>
-                <td colSpan={3} className="px-4 py-3 font-bold text-white" style={{ backgroundColor: 'var(--dark-green)' }}>
-                  MADERA DIMENSIONADA (W5.2)
+              {/* === SECCIÓN MADERA Y SUBPRODUCTOS REGULARES === */}
+              {!isVisionUser && (
+                <>
+                  {/* === SECCIÓN MADERA (W5.2) === */}
+                  <tr>
+                    <td colSpan={3} className="px-4 py-3 font-bold text-white" style={{ backgroundColor: 'var(--dark-green)' }}>
+                      MADERA DIMENSIONADA (W5.2)
                 </td>
                 {MESES.map(m => (
                   <td key={m} className="px-3 py-3" style={{ backgroundColor: 'var(--dark-green)' }} />
@@ -977,6 +1049,82 @@ function DashboardPage() {
                   </td>
                 ))}
               </tr>
+              </>
+              )}
+
+              {/* === SECCIÓN PALLETS W10.3 === */}
+              {isVisionUser && (
+                <>
+                  <tr>
+                    <td colSpan={3} className="px-4 py-3 font-bold text-white" style={{ backgroundColor: 'var(--dark-green)' }}>
+                      PALLETS (W10.3)
+                    </td>
+                    {MESES.map(m => (
+                      <td key={m} className="px-3 py-3" style={{ backgroundColor: 'var(--dark-green)' }} />
+                    ))}
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-semibold text-gray-800 border-b" style={{ borderColor: 'var(--light-brown)' }}>Producción</td>
+                    <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>W10.3 Pallets de madera</td>
+                    <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>—</td>
+                    {MESES.map(m => (
+                      <td key={m} className="px-3 py-3 text-right text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>
+                        {formatNumber(data.produccionPallets[m])}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-semibold text-gray-800 border-b" style={{ borderColor: 'var(--light-brown)' }}>Factor Rendimiento</td>
+                    <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>W10.3 Pallets de madera</td>
+                    <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>%</td>
+                    {MESES.map(m => (
+                      <td key={m} className="px-3 py-3 text-right text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>
+                        {formatNumber(data.rendimientoPallets[m])}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td colSpan={3} className="px-4 py-3 font-bold text-white" style={{ backgroundColor: 'var(--medium-brown)' }}>
+                      VENTAS PALLETS
+                    </td>
+                    {MESES.map(m => (
+                      <td key={m} className="px-3 py-3" style={{ backgroundColor: 'var(--medium-brown)' }} />
+                    ))}
+                  </tr>
+                  {CERTS.map(cert => (
+                    <tr key={cert + '-venta-pallets'} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>—</td>
+                      <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>W10.3 Pallets de madera</td>
+                      <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>{cert}</td>
+                      {MESES.map(m => (
+                        <td key={m} className="px-3 py-3 text-right text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>
+                          {formatNumber(data.ventasPallets[cert]?.[m])}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-semibold text-gray-800 border-b" style={{ borderColor: 'var(--light-brown)' }}>Stock Inicial Pallets</td>
+                    <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>W10.3 Pallets de madera</td>
+                    <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>—</td>
+                    {MESES.map(m => (
+                      <td key={m} className="px-3 py-3 text-right text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>
+                        {formatNumber(data.stockInicial['W10.3']?.[m])}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-semibold text-gray-800 border-b" style={{ borderColor: 'var(--light-brown)' }}>Stock Final Pallets</td>
+                    <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>W10.3 Pallets de madera</td>
+                    <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>—</td>
+                    {MESES.map(m => (
+                      <td key={m} className="px-3 py-3 text-right text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>
+                        {formatNumber(data.stockFinal['W10.3']?.[m])}
+                      </td>
+                    ))}
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </div>
