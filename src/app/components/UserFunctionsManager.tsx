@@ -156,7 +156,7 @@ export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect
     }
 
     setIsExecuting(func.id)
-    
+
     // DEBUG: Log de la función que se está ejecutando
     console.log('🎯 EJECUTANDO FUNCIÓN:', func.id, func.function_name)
 
@@ -179,13 +179,13 @@ export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect
 
       if (result.success) {
         showToast('success', `¡Procesamiento completado! ${result.records_processed || 0} registros procesados exitosamente`)
-        
+
         // FORZAR DETECCIÓN PARA FUNCIONES DE VENTAS (ID 3 y 4)
         if (func.id === 3 || func.id === 4) {
           console.log(`🎯 FUNCIÓN ID ${func.id} DETECTADA - FORZANDO TIPO VENTAS`)
           result.function_type = 'ventas'
         }
-        
+
         setExecutionResult(result)
         setSelectedFile(null)
 
@@ -250,7 +250,7 @@ export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect
       console.log('🔍 Buscando MASISA en statement:', firstStatement?.includes('MASISA'))
       console.log('🔍 Buscando ARAUCO en statement:', firstStatement?.includes('ARAUCO'))
       console.log('🔍 Buscando INSERT INTO ventas:', firstStatement?.includes('INSERT INTO ventas'))
-      
+
       if (firstStatement && firstStatement.includes('ARAUCO')) {
         apiEndpoint = '/api/bulk-insert-ventas-arauco'
         tableType = 'ventas'
@@ -425,10 +425,10 @@ export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect
                           onClick={() => executeFunction(func)}
                           disabled={isExecuting === func.id || !selectedFile}
                           className={`px-3 py-1 text-sm rounded ${isExecuting === func.id
-                              ? 'bg-yellow-100 text-yellow-800 cursor-not-allowed'
-                              : selectedFile
-                                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            ? 'bg-yellow-100 text-yellow-800 cursor-not-allowed'
+                            : selectedFile
+                              ? 'bg-blue-500 text-white hover:bg-blue-600'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             }`}
                         >
                           {isExecuting === func.id ? 'Ejecutando...' : 'Ejecutar'}
@@ -445,8 +445,8 @@ export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect
                       <button
                         onClick={() => toggleFunctionStatus(func.id, func.is_active)}
                         className={`px-3 py-1 text-sm rounded ${func.is_active
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                           }`}
                       >
                         {func.is_active ? 'Activa' : 'Inactiva'}
@@ -498,8 +498,8 @@ export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect
                 onClick={insertRecordsToDatabase}
                 disabled={isInserting || !executionResult.insert_statements?.length}
                 className={`px-6 py-2 rounded-md font-medium ${isInserting
-                    ? 'bg-yellow-100 text-yellow-800 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
+                  ? 'bg-yellow-100 text-yellow-800 cursor-not-allowed'
+                  : 'bg-green-600 text-white hover:bg-green-700'
                   }`}
               >
                 {isInserting ? 'Insertando...' : '💾 Insertar en Base de Datos'}

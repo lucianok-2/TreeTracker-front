@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       // NO EJECUTAR INSERT STATEMENTS AUTOMÁTICAMENTE
       // Los INSERT statements se devuelven al frontend para que el usuario decida cuándo insertarlos
       console.log('📋 Devolviendo INSERT statements al frontend para inserción manual')
-      
+
       const insertedRecords = 0
       const errors = []
 
