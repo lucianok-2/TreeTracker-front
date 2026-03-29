@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         try {
           // Regex mejorado que soporta comillas escapadas ('') y es flexible con espacios
           // Grupos: 1:fecha, 2:producto, 3:cliente, 4:factura, 5:volumen, 6:certificacion, 7:precio, 8:user_id
-          const regex = /VALUES\s*\(\s*'((?:''|[^'])+)'\s*,\s*'((?:''|[^'])+)'\s*,\s*'((?:''|[^'])+)'\s*,\s*'((?:''|[^'])+)'\s*,\s*([^,]+)\s*,\s*'((?:''|[^'])+)'\s*,\s*(NULL|[^,]+)\s*,\s*'([^']+)'\s*\)/i;
+          const regex = /VALUES\s*\(\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*([^,]+)\s*,\s*'((?:''|[^'])*)'\s*,\s*(NULL|[^,]+)\s*,\s*'([^']*)'\s*\)/i;
           const match = statement.match(regex);
           
           if (match) {
