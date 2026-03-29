@@ -71,19 +71,21 @@ export async function POST(request: NextRequest) {
 
       for (const statement of insert_statements) {
         try {
-          // Extraer valores del INSERT statement para ventas usando regex
-          // INSERT INTO ventas (fecha_venta, producto_codigo, cliente, num_factura, volumen_m3, certificacion, precio_unitario, user_id)
-          const match = statement.match(/VALUES \('([^']+)', '([^']+)', '([^']+)', '([^']+)', ([^,]+), '([^']+)', (NULL|[^,]+), '([^']+)'\)/);
+          // Regex mejorado que soporta comillas escapadas ('') y es flexible con espacios
+          // Grupos: 1:fecha, 2:producto, 3:cliente, 4:factura, 5:volumen, 6:certificacion, 7:precio, 8:user_id
+          const regex = /VALUES\s*\(\s*'((?:''|[^'])+)'\s*,\s*'((?:''|[^'])+)'\s*,\s*'((?:''|[^'])+)'\s*,\s*'((?:''|[^'])+)'\s*,\s*([^,]+)\s*,\s*'((?:''|[^'])+)'\s*,\s*(NULL|[^,]+)\s*,\s*'([^']+)'\s*\)/i;
+          const match = statement.match(regex);
+          
           if (match) {
             parsedRecords.push({
               fecha_venta: match[1],
-              producto_codigo: match[2],
-              cliente: match[3].replace(/''/g, "'"), // Desescapar comillas
-              num_factura: match[4],
+              producto_codigo: match[2].replace(/''/g, "'"),
+              cliente: match[3].replace(/''/g, "'"),
+              num_factura: match[4].replace(/''/g, "'"),
               volumen_m3: parseFloat(match[5]),
-              certificacion: match[6].replace(/''/g, "'"), // Desescapar comillas
-              precio_unitario: match[7] === 'NULL' ? null : parseFloat(match[7]),
-              user_id: validUserId // Usar el usuario autenticado
+              certificacion: match[6].replace(/''/g, "'"),
+              precio_unitario: match[7].trim().toUpperCase() === 'NULL' ? null : parseFloat(match[7]),
+              user_id: validUserId
             });
           }
         } catch (parseError) {
