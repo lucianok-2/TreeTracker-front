@@ -87,6 +87,10 @@ export async function POST(request: NextRequest) {
               precio_unitario: match[7].trim().toUpperCase() === 'NULL' ? null : parseFloat(match[7]),
               user_id: validUserId
             });
+          } else if (insert_statements.indexOf(statement) === 0) {
+            console.log("❌ REGEX FAIL on statement:", statement);
+            const vpMatch = statement.match(/VALUES\s*\((.*)\)/i);
+            if (vpMatch) console.log("Values extracted:", vpMatch[1]);
           }
         } catch (parseError) {
           errors.push(`Error parseando statement: ${parseError}`);
