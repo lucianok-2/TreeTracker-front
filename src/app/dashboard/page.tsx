@@ -76,9 +76,8 @@ interface RawData {
 
 
 function DashboardPage() {
-  const { user } = useAuth()
+  const { user, isVisionUser } = useAuth()
   const [year, setYear] = useState(new Date().getFullYear())
-  const [isVisionUser, setIsVisionUser] = useState(false)
 
 
 
@@ -138,29 +137,6 @@ function DashboardPage() {
     const loadAllData = async () => {
       try {
         const currentYear = year
-
-        // Check if user is in 'vision' table (envolver "user" por ser palabra reservada en Postgres)
-        const { data: visionData, error: visionError } = await supabase
-          .from('vision')
-          .select('"user"')
-          .eq('"user"', user?.id)
-          .single()
-        
-        if (visionError && visionError.code !== 'PGRST116') { // Ignorar error de "No rows"
-          console.error('Error fetching vision user:', visionError)
-        }
-        
-        // Agregar UUID quemado por seguridad si el RLS (Row Level Security) de Supabase bloquea la consulta a la tabla
-        const isVision = !!visionData || user?.id === 'ae6a5783-4da9-49d2-b415-af7384362b7c'
-        
-        console.log('--- DEBUG VISION USER ---', { 
-          userIdLogueado: user?.id, 
-          isVisionUser: isVision,
-          respuestaTabla: visionData,
-          errorTabla: visionError
-        })
-
-        setIsVisionUser(isVision)
 
         // Cargar stock inicial
         const { data: stockData, error: stockError } = await supabase
