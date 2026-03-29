@@ -48,7 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         const vision = await checkIsVisionUser(session.user.id)
         setIsVisionUser(vision)
-        console.log('🔍 Vision user check (getSession):', { userId: session.user.id, isVision: vision })
+        console.group('👁️ VISION USER - Sesión inicial')
+        console.log('Usuario ID:', session.user.id)
+        console.log('Email:', session.user.email)
+        console.log(vision ? '✅ ES usuario Vision (vista solo pallets)' : '❌ NO es usuario Vision (vista estándar)')
+        console.groupEnd()
       }
       setLoading(false)
     })
@@ -61,9 +65,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           const vision = await checkIsVisionUser(session.user.id)
           setIsVisionUser(vision)
-          console.log('🔍 Vision user check (onAuthStateChange):', { event, userId: session.user.id, isVision: vision })
+          console.group(`👁️ VISION USER - Evento: ${event}`)
+          console.log('Usuario ID:', session.user.id)
+          console.log('Email:', session.user.email)
+          console.log(vision ? '✅ ES usuario Vision (vista solo pallets)' : '❌ NO es usuario Vision (vista estándar)')
+          console.groupEnd()
         } else {
           setIsVisionUser(false)
+          console.log('👁️ VISION USER: Sin sesión activa → isVisionUser = false')
         }
         setLoading(false)
       }
