@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:5000'
+const PYTHON_API_URL =
+  process.env.PYTHON_API_INTERNAL_URL ||
+  process.env.PYTHON_API_URL ||
+  'http://localhost:5000'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -64,9 +67,11 @@ export async function POST(request: NextRequest) {
 
     try {
       // Llamar a la API Python Flask
+      const endpoint = `${PYTHON_API_URL}/execute-function`
       const pythonResponse = await fetch(`${PYTHON_API_URL}/execute-function`, {
         method: 'POST',
         body: pythonFormData,
+        signal: AbortSignal.timeout(30000),
       })
 
       if (!pythonResponse.ok) {
@@ -121,6 +126,10 @@ export async function POST(request: NextRequest) {
           .eq('id', historyRecord.id)
       }
 
+      if (pythonError instanceof Error) {
+        throw new Error(`Error llamando a ${endpoint}: ${pythonError.message}`)
+      }
+
       throw pythonError
     }
 
@@ -128,11 +137,12 @@ export async function POST(request: NextRequest) {
     console.error('Error en execute-function:', error)
 
     // Si la API Python no está disponible, mostrar mensaje específico
-    if (error instanceof TypeError && error.message.includes('fetch')) {
+    if (error instanceof Error && error.message.toLowerCase().includes('fetch')) {
       return NextResponse.json(
         {
-          error: 'API Python no disponible. Asegúrate de que la API Flask esté ejecutándose en http://localhost:5000',
-          details: 'Ejecuta: cd python-api && python start.py'
+          error: 'No se pudo conectar con la API Python.',
+          details: `Verifica conectividad desde el contenedor frontend hacia ${PYTHON_API_URL} y configura PYTHON_API_INTERNAL_URL en Dokploy para usar la red interna.`,
+          python_api_url: PYTHON_API_URL
         },
         { status: 503 }
       )
