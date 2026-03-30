@@ -64,11 +64,11 @@ export async function POST(request: NextRequest) {
     pythonFormData.append('file', file)
     pythonFormData.append('functionId', functionId)
     pythonFormData.append('userId', userId)  // PASAR EL USER_ID AL PYTHON
+    const endpoint = `${PYTHON_API_URL}/execute-function`
 
     try {
       // Llamar a la API Python Flask
-      const endpoint = `${PYTHON_API_URL}/execute-function`
-      const pythonResponse = await fetch(`${PYTHON_API_URL}/execute-function`, {
+      const pythonResponse = await fetch(endpoint, {
         method: 'POST',
         body: pythonFormData,
         signal: AbortSignal.timeout(30000),
