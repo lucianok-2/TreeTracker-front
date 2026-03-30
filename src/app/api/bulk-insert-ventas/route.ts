@@ -95,24 +95,29 @@ export async function POST(request: NextRequest) {
 
       if (parsedRecords.length > 0) {
         console.log(`🔄 Insertando ${parsedRecords.length} registros de ventas finales...`);
+        console.log('📋 Primer registro de muestra:', parsedRecords[0]);
         
         try {
-          const { data, error: insertError } = await supabase
+          // USAR EL CLIENTE DE SUPABASE CONFIGURADO CON SERVICE ROLE
+          const { data, error: insertError } = await (supabase as any)
             .from('ventas')
             .insert(parsedRecords)
             .select();
 
           if (insertError) {
-            console.error('❌ Error de Supabase al insertar:', insertError);
+            console.error('❌ ERROR DE SUPABASE AL INSERTAR:', insertError.message);
+            console.error('❌ Detalles:', insertError);
             throw insertError;
           }
 
           insertedCount = data ? data.length : parsedRecords.length;
-          console.log(`✅ Inserción masiva exitosa: ${insertedCount} registros`);
+          console.log(`✅ Inserción masiva exitosa: ${insertedCount} registros guardados en DB`);
         } catch (dbError: any) {
-          console.error('❌ Error fatal en base de datos:', dbError);
+          console.error('❌ ERROR FATAL EN BASE DE DATOS:', dbError.message || dbError);
           errors.push(`Error en inserción masiva: ${dbError.message || dbError}`);
         }
+      } else {
+        console.log('⚠️ No se parseó ningún registro válido de los enunciados recibidos.');
       }
     } else if (records && Array.isArray(records)) {
       console.log(`🔄 Insertando ${records.length} registros de ventas directamente...`);
