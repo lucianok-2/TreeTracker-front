@@ -277,6 +277,11 @@ export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect
         tableType = 'produccion'
         console.log('🏭 DETECTADO PRODUCCION - USANDO ENDPOINT PRODUCCION')
         console.log('🔍 Statement completo:', firstStatement)
+      } else if (firstStatement && (firstStatement.includes('INSERT INTO consumos') || firstStatement.includes('INSERT INTO consumo'))) {
+        apiEndpoint = '/api/bulk-insert-consumo'
+        tableType = 'consumos'
+        console.log('🪵 DETECTADO CONSUMO - USANDO ENDPOINT CONSUMO')
+        console.log('🔍 Statement completo:', firstStatement)
       } else {
         apiEndpoint = '/api/bulk-insert-recepciones'
         tableType = 'recepciones'
