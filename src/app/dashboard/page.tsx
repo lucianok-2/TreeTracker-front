@@ -349,7 +349,7 @@ function DashboardPage() {
           const [año, mes] = fechaStr.split('-').map(Number)
           const mesNumero = mes - 1 // Convertir de 1-12 a 0-11
           const mesNombre = MESES[mesNumero]
-          const cert = item.certificacion
+          const cert = item.certificacion || 'Material Controlado'
 
           console.log('Procesando venta:', {
             fecha_original: item.fecha_venta,
@@ -1067,18 +1067,31 @@ function DashboardPage() {
                       <td key={m} className="px-3 py-3" style={{ backgroundColor: 'var(--medium-brown)' }} />
                     ))}
                   </tr>
-                  {CERTS.map(cert => (
-                    <tr key={cert + '-venta-pallets'} className="hover:bg-gray-50">
+                  {Object.keys(data.ventasPallets || {}).length > 0 ? (
+                    Object.keys(data.ventasPallets).map(cert => (
+                      <tr key={cert + '-venta-pallets'} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>—</td>
+                        <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>W10.3 Pallets de madera</td>
+                        <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>{cert || 'Venta Directa'}</td>
+                        {MESES.map(m => (
+                          <td key={m} className="px-3 py-3 text-right text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>
+                            {formatNumber(data.ventasPallets[cert]?.[m])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>—</td>
                       <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>W10.3 Pallets de madera</td>
-                      <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>{cert}</td>
+                      <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>Material Controlado</td>
                       {MESES.map(m => (
                         <td key={m} className="px-3 py-3 text-right text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>
-                          {formatNumber(data.ventasPallets[cert]?.[m])}
+                          {formatNumber(data.ventasPallets['Material Controlado']?.[m])}
                         </td>
                       ))}
                     </tr>
-                  ))}
+                  )}
                   <tr className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-semibold text-gray-800 border-b" style={{ borderColor: 'var(--light-brown)' }}>Stock Inicial Pallets</td>
                     <td className="px-4 py-3 text-gray-700 border-b" style={{ borderColor: 'var(--light-brown)' }}>W10.3 Pallets de madera</td>

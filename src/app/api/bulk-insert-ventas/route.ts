@@ -72,9 +72,15 @@ export async function POST(request: NextRequest) {
       for (const statement of insert_statements) {
         try {
           // Regex mejorado que soporta comillas escapadas ('') y es flexible con espacios
+          // Intentar primero con 8 columnas (incluye precio_unitario)
           // Grupos: 1:fecha, 2:producto, 3:cliente, 4:factura, 5:volumen, 6:certificacion, 7:precio, 8:user_id
-          const regex = /VALUES\s*\(\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*([^,]+)\s*,\s*'((?:''|[^'])*)'\s*,\s*(NULL|[^,]+)\s*,\s*'([^']*)'\s*\)/i;
-          const match = statement.match(regex);
+          const regex8 = /VALUES\s*\(\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*([^,]+)\s*,\s*'((?:''|[^'])*)'\s*,\s*(NULL|[^,]+)\s*,\s*'([^']*)'\s*\)/i;
+          
+          // Intentar con 7 columnas (sin precio_unitario)
+          // Grupos: 1:fecha, 2:producto, 3:cliente, 4:factura, 5:volumen, 6:certificacion, 7:user_id
+          const regex7 = /VALUES\s*\(\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*'((?:''|[^'])*)'\s*,\s*([^,]+)\s*,\s*'((?:''|[^'])*)'\s*,\s*'([^']*)'\s*\)/i;
+          
+          let match = statement.match(regex8);
           
           if (match) {
             parsedRecords.push({
@@ -87,6 +93,20 @@ export async function POST(request: NextRequest) {
               precio_unitario: match[7].trim().toUpperCase() === 'NULL' ? null : parseFloat(match[7]),
               user_id: validUserId
             });
+          } else {
+            match = statement.match(regex7);
+            if (match) {
+              parsedRecords.push({
+                fecha_venta: match[1],
+                producto_codigo: match[2].replace(/''/g, "'"),
+                cliente: match[3].replace(/''/g, "'"),
+                num_factura: match[4].replace(/''/g, "'"),
+                volumen_m3: parseFloat(match[5]),
+                certificacion: match[6].replace(/''/g, "'"),
+                precio_unitario: null,
+                user_id: validUserId
+              });
+            }
           }
         } catch (parseError) {
           console.error('❌ Error parseando statement:', parseError);
