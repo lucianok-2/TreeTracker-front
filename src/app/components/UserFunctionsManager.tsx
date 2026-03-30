@@ -21,6 +21,17 @@ interface UserFunctionsManagerProps {
   onFunctionSelect?: (functionId: number, functionName: string) => void
 }
 
+interface ExecutionResult {
+  success: boolean;
+  records_processed?: number;
+  sheets_processed?: number;
+  insert_statements?: string[];
+  errors?: string[];
+  message?: string;
+  function_type?: string;
+  inserted_count?: number;
+}
+
 export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect }: UserFunctionsManagerProps) {
   const { user } = useAuth()
   const { toasts, showToast, removeToast } = useToast()
@@ -31,9 +42,9 @@ export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect
   const [isCreating, setIsCreating] = useState(false)
   const [isExecuting, setIsExecuting] = useState<number | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [executionResult, setExecutionResult] = useState<unknown>(null)
+  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null)
   const [isInserting, setIsInserting] = useState(false)
-  const [insertResult, setInsertResult] = useState<unknown>(null)
+  const [insertResult, setInsertResult] = useState<any>(null)
 
   const loadUserFunctions = useCallback(async () => {
     setIsLoading(true)
@@ -61,7 +72,7 @@ export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect
       console.log('📋 Funciones:', result.functions)
 
       // Convertir las funciones al formato esperado
-      const userFunctions = result.functions.map((func: unknown) => ({
+      const userFunctions = result.functions.map((func: any) => ({
         id: func.id,
         function_name: func.function_name,
         function_description: func.function_description,
@@ -259,7 +270,12 @@ export default function UserFunctionsManager({ isOpen, onClose, onFunctionSelect
       } else if (firstStatement && (firstStatement.includes('MASISA') || firstStatement.includes('INSERT INTO ventas'))) {
         apiEndpoint = '/api/bulk-insert-ventas'
         tableType = 'ventas'
-        console.log('🎯 DETECTADO MASISA - USANDO ENDPOINT MASISA')
+        console.log('🎯 DETECTADO MASISA/VENTAS - USANDO ENDPOINT VENTAS')
+        console.log('🔍 Statement completo:', firstStatement)
+      } else if (firstStatement && firstStatement.includes('INSERT INTO produccion')) {
+        apiEndpoint = '/api/bulk-insert-produccion'
+        tableType = 'produccion'
+        console.log('🏭 DETECTADO PRODUCCION - USANDO ENDPOINT PRODUCCION')
         console.log('🔍 Statement completo:', firstStatement)
       } else {
         apiEndpoint = '/api/bulk-insert-recepciones'
